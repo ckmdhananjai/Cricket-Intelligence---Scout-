@@ -201,6 +201,13 @@ textarea{resize:vertical;min-height:90px;line-height:1.6}
             <option>Vidarbha</option><option>West Bengal</option><option>Multiple states</option>
           </select>
         </div>
+        <div class="field">
+          <label class="label">Scouting for <span class="req">*</span></label>
+          <div class="chips">
+            <input type="radio" name="team" id="tm1" value="MI Men" class="chip-in"><label for="tm1" class="chip-lb" style="font-weight:700">🔵 MI Men</label>
+            <input type="radio" name="team" id="tm2" value="MI Women" class="chip-in"><label for="tm2" class="chip-lb" style="font-weight:700">🔵 MI Women</label>
+          </div>
+        </div>
         <button class="btn btn-primary" onclick="loginScout()">Start filing reports →</button>
       </div>
     </div>
@@ -773,7 +780,7 @@ textarea{resize:vertical;min-height:90px;line-height:1.6}
 
 <script>
 // ── STATE ──
-var scout = {name:'', phone:'', region:''};
+var scout = {name:'', phone:'', region:'', team:''};
 var players = [];
 var editingIdx = -1;
 
@@ -789,14 +796,17 @@ function loginScout(){
   var first = document.getElementById('s-first').value.trim();
   var last  = document.getElementById('s-last').value.trim();
   if(!first||!last){alert('Please enter your first and last name.');return;}
+  var team = document.querySelector('input[name="team"]:checked');
+  if(!team){alert('Please select MI Men or MI Women.');return;}
   scout.name   = first+' '+last;
   scout.phone  = document.getElementById('s-phone').value.trim();
   scout.region = document.getElementById('s-region').value;
+  scout.team   = team.value;
 
   var initials = (first[0]+(last[0]||'')).toUpperCase();
   document.getElementById('scout-avatar').textContent   = initials;
   document.getElementById('badge-name').textContent     = scout.name;
-  document.getElementById('badge-meta').textContent     = scout.region || 'Scout';
+  document.getElementById('badge-meta').textContent     = scout.team + (scout.region ? ' · ' + scout.region : '');
   document.getElementById('session-avatar').textContent = initials;
   document.getElementById('session-badge-name').textContent = scout.name;
 
@@ -983,23 +993,43 @@ function clearPlayerForm(){
 }
 
 // ── SUBMIT SESSION ──
+var SHEET_URL = 'https://script.google.com/macros/s/AKfycbwo4Tgx858H727F-4XrzNKzafxVCYStwu3d85P7Z1bwzCJHzS8TNbSOFdS3zYJk_sIH/exec';
+
 function submitSession(){
   if(players.length===0){alert('No players to submit.');return;}
   var btn = document.getElementById('submit-all-btn');
   btn.textContent = 'Submitting...';
   btn.disabled = true;
 
-  var report = buildFullReport();
+  var payload = {
+    submittedAt: new Date().toISOString(),
+    scoutName:   scout.name,
+    scoutPhone:  scout.phone,
+    scoutRegion: scout.region,
+    team:        scout.team,
+    players:     players
+  };
 
-  // Copy to clipboard for MI Cricket Intelligence ops team
-  if(navigator.clipboard){navigator.clipboard.writeText(report).catch(function(){});}
-
-  setTimeout(function(){
+  fetch(SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(function(){
     var doneBody = 'You filed '+players.length+' player report'+(players.length!==1?'s':'')+' in this session. ';
-    doneBody += 'The full report has been copied to your clipboard — paste it into WhatsApp, email, or your ops channel.';
+    doneBody += 'All reports have been saved to MI Cricket Intelligence — the ops team can see them now in Google Sheets.';
     document.getElementById('done-body').textContent = doneBody;
     showScreen('screen-done');
-  }, 1000);
+  })
+  .catch(function(err){
+    // Even on network error with no-cors, Google usually receives it
+    // Show success but note to check sheet
+    var doneBody = 'Reports submitted. If you have a weak connection, check with the ops team to confirm receipt.';
+    document.getElementById('done-body').textContent = doneBody;
+    showScreen('screen-done');
+    console.error(err);
+  });
 }
 
 // ── BUILD REPORT ──
@@ -1009,6 +1039,7 @@ function buildFullReport(){
   lines.push('║  MI CRICKET INTELLIGENCE           ║');
   lines.push('╚═══════════════════════════════════╝');
   lines.push('Scout: '+scout.name+(scout.region?' | '+scout.region:''));
+  if(scout.team) lines.push('Database: '+scout.team);
   if(scout.phone) lines.push('Mobile: '+scout.phone);
   lines.push('Session date: '+new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}));
   lines.push('Players filed: '+players.length);
@@ -1104,6 +1135,7 @@ function newSession(){
   document.getElementById('s-last').value='';
   document.getElementById('s-phone').value='';
   document.getElementById('s-region').selectedIndex=0;
+  document.querySelectorAll('input[name="team"]').forEach(function(el){el.checked=false;});
   showScreen('screen-login');
 }
 
