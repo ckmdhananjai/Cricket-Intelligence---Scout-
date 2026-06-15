@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a3d2b">
+<title>MI Cricket Intelligence</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1a3d2b;--green-mid:#2d6a47;--green-light:#e8f5ee;
+  --amber:#e8a020;--amber-light:#fef3dc;
+  --white:#fff;--slate:#4a5568;--slate-light:#718096;
+  --border:#e2e8f0;--text:#1a202c;--error:#c53030;
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f2;color:var(--text);min-height:100vh}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+
+/* ── HEADER ── */
+.header{background:var(--green);position:relative;overflow:hidden}
+.pitch-bg{position:absolute;inset:0;opacity:.12}
+.header-inner{position:relative;z-index:2;padding:28px 20px 22px;text-align:center}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+.header-title{font-size:24px;font-weight:700;color:#fff;line-height:1.2}
+.header-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:4px}
+
+/* ── SCOUT BADGE (persistent after login) ── */
+.scout-badge{background:var(--green);padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.1)}
+.scout-avatar{width:32px;height:32px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.scout-name{font-size:13px;font-weight:600;color:#fff}
+.scout-meta{font-size:11px;color:rgba(255,255,255,.55)}
+.player-count-badge{margin-left:auto;background:rgba(255,255,255,.15);border-radius:50px;padding:4px 10px;font-size:12px;font-weight:600;color:#fff}
+
+/* ── BODY ── */
+.body{padding:14px;max-width:600px;margin:0 auto;padding-bottom:40px}
+
+/* ── SECTION CARD ── */
+.card{background:var(--white);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card-header{background:var(--green);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.card-icon{width:26px;height:26px;background:rgba(255,255,255,.12);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.card-title{font-size:13px;font-weight:600;color:#fff}
+.card-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:1px}
+.card-body{padding:16px}
+
+/* ── FIELDS ── */
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.label{display:block;font-size:13px;font-weight:600;color:var(--slate);margin-bottom:6px}
+.req{color:var(--amber);margin-left:2px}
+.hint{font-size:11px;color:var(--slate-light);margin-bottom:6px;font-style:italic}
+input[type=text],input[type=tel],input[type=number],input[type=url],select,textarea{
+  width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-size:15px;color:var(--text);background:#fafafa;-webkit-appearance:none;appearance:none;
+  transition:border-color .2s;font-family:inherit}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a5568' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green-mid);background:#fff}
+textarea{resize:vertical;min-height:90px;line-height:1.6}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── CHIPS ── */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip-in{display:none}
+.chip-lb{padding:9px 14px;border:1.5px solid var(--border);border-radius:50px;font-size:13px;font-weight:500;color:var(--slate);cursor:pointer;transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent;background:#fafafa}
+.chip-in:checked+.chip-lb{background:var(--green);border-color:var(--green);color:#fff}
+
+/* ── GRADE CHIPS ── */
+.grade-chips{display:flex;gap:8px;flex-wrap:wrap}
+.gchip-in{display:none}
+.gchip-lb{width:50px;height:50px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:700;color:var(--slate);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:#fafafa}
+.gchip-in:checked+.gchip-lb{background:var(--amber);border-color:var(--amber);color:#fff}
+
+/* ── NARRATIVE CALLOUT ── */
+.callout{background:var(--amber-light);border-left:3px solid var(--amber);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px}
+.callout p{font-size:12px;color:#7a5c00;line-height:1.5;font-style:italic}
+
+/* ── DIFFICULT OVERS CALLOUT ── */
+.callout-hot{background:#fff5f0;border-left:3px solid #e8a020;border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px}
+.callout-hot p{font-size:12px;color:#8b3a00;line-height:1.5;font-style:italic}
+.callout-hot strong{color:var(--amber)}
+
+.divider{height:1px;background:var(--border);margin:14px 0}
+.conditional{display:none}
+.conditional.on{display:block}
+
+/* ── BUTTONS ── */
+.btn{width:100%;padding:16px;border:none;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;font-family:inherit}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:active{background:var(--green-mid)}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-amber:active{opacity:.85}
+.btn-outline{background:#fff;color:var(--green);border:2px solid var(--green)}
+.btn-outline:active{background:var(--green-light)}
+.btn-sm{padding:12px;font-size:14px}
+.btn:disabled{opacity:.5}
+
+/* ── PLAYER CARDS IN SESSION ── */
+.session-player{background:#fff;border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;gap:12px}
+.sp-num{width:36px;height:36px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--green);flex-shrink:0}
+.sp-info{flex:1}
+.sp-name{font-size:14px;font-weight:600;color:var(--text)}
+.sp-meta{font-size:12px;color:var(--slate-light);margin-top:2px}
+.sp-grade{background:var(--amber);color:#fff;font-size:13px;font-weight:700;border-radius:6px;padding:4px 10px;flex-shrink:0}
+.sp-grade.grade-a-plus{background:#1a3d2b}
+
+/* ── SUCCESS ── */
+.success-wrap{text-align:center;padding:50px 24px}
+.success-icon{font-size:52px;margin-bottom:16px}
+.success-title{font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px}
+.success-body{font-size:14px;color:var(--slate);line-height:1.6;margin-bottom:28px}
+
+/* ── PROGRESS ── */
+.progress-strip{background:var(--green);padding:0 16px 12px}
+.prog-track{height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .4s ease;width:0%}
+.prog-label{display:flex;justify-content:space-between;margin-top:5px;font-size:11px;color:rgba(255,255,255,.45)}
+
+/* ── STEP INDICATOR ── */
+.steps{display:flex;gap:6px;padding:14px 16px;background:#fff;border-bottom:1px solid var(--border);overflow-x:auto}
+.step{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;color:var(--slate-light)}
+.step.done{color:var(--green-mid)}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0}
+.step.done .step-dot{background:var(--green-mid)}
+.step.active .step-dot{background:var(--amber)}
+.step.active{color:var(--amber);font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════ -->
+<!-- SCREEN 1: SCOUT LOGIN                  -->
+<!-- ══════════════════════════════════════ -->
+<div class="screen active" id="screen-login">
+  <div class="header">
+    <svg class="pitch-bg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <rect x="155" y="8" width="90" height="144" fill="none" stroke="white" stroke-width="1.5"/>
+      <line x1="155" y1="30" x2="245" y2="30" stroke="white" stroke-width="1"/>
+      <line x1="155" y1="130" x2="245" y2="130" stroke="white" stroke-width="1"/>
+      <line x1="185" y1="18" x2="185" y2="30" stroke="white" stroke-width="2"/>
+      <line x1="200" y1="18" x2="200" y2="30" stroke="white" stroke-width="2"/>
+      <line x1="215" y1="18" x2="215" y2="30" stroke="white" stroke-width="2"/>
+      <line x1="185" y1="130" x2="185" y2="142" stroke="white" stroke-width="2"/>
+      <line x1="200" y1="130" x2="200" y2="142" stroke="white" stroke-width="2"/>
+      <line x1="215" y1="130" x2="215" y2="142" stroke="white" stroke-width="2"/>
+      <line x1="183" y1="18" x2="217" y2="18" stroke="white" stroke-width="1.5"/>
+      <line x1="183" y1="142" x2="217" y2="142" stroke="white" stroke-width="1.5"/>
+      <ellipse cx="200" cy="80" rx="192" ry="72" fill="none" stroke="white" stroke-width="0.8" stroke-dasharray="5 4"/>
+      <circle cx="55" cy="80" r="2.5" fill="white" opacity=".4"/><circle cx="345" cy="80" r="2.5" fill="white" opacity=".4"/>
+      <circle cx="200" cy="8" r="2.5" fill="white" opacity=".4"/><circle cx="200" cy="152" r="2.5" fill="white" opacity=".4"/>
+      <circle cx="95" cy="28" r="2.5" fill="white" opacity=".4"/><circle cx="305" cy="28" r="2.5" fill="white" opacity=".4"/>
+      <circle cx="95" cy="132" r="2.5" fill="white" opacity=".4"/><circle cx="305" cy="132" r="2.5" fill="white" opacity=".4"/>
+    </svg>
+    <div class="header-inner">
+      <div class="eyebrow">MI Cricket Intelligence</div>
+      <div class="header-title">Scout Reporting</div>
+      <div class="header-sub">MI Cricket Intelligence — log in once, report as many players as you like</div>
+    </div>
+  </div>
+
+  <div class="body" style="padding-top:20px">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🧑</div>
+        <div>
+          <div class="card-title">Who are you?</div>
+          <div class="card-sub">Your name stays on every report you file today</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="two-col">
+          <div class="field">
+            <label class="label" for="s-first">First name <span class="req">*</span></label>
+            <input type="text" id="s-first" placeholder="Ravi" autocomplete="given-name">
+          </div>
+          <div class="field">
+            <label class="label" for="s-last">Last name <span class="req">*</span></label>
+            <input type="text" id="s-last" placeholder="Kumar" autocomplete="family-name">
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="s-phone">Mobile number</label>
+          <input type="tel" id="s-phone" placeholder="+91 98765 43210" autocomplete="tel">
+        </div>
+        <div class="field">
+          <label class="label" for="s-region">Your scouting region</label>
+          <select id="s-region">
+            <option value="">Select state / region</option>
+            <option>Andhra Pradesh</option><option>Assam</option><option>Bihar</option>
+            <option>Chandigarh</option><option>Chhattisgarh</option><option>Delhi</option>
+            <option>Goa</option><option>Gujarat</option><option>Haryana</option>
+            <option>Himachal Pradesh</option><option>Hyderabad</option>
+            <option>Jammu & Kashmir</option><option>Jharkhand</option><option>Karnataka</option>
+            <option>Kerala</option><option>Madhya Pradesh</option><option>Maharashtra</option>
+            <option>Manipur</option><option>Meghalaya</option><option>Mumbai</option>
+            <option>Nagaland</option><option>Odisha</option><option>Punjab</option>
+            <option>Rajasthan</option><option>Saurashtra</option><option>Tamil Nadu</option>
+            <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+            <option>Vidarbha</option><option>West Bengal</option><option>Multiple states</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="loginScout()">Start filing reports →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- SCREEN 2: PLAYER FORM                  -->
+<!-- ══════════════════════════════════════ -->
+<div class="screen" id="screen-player">
+
+  <!-- Persistent scout badge -->
+  <div class="header" style="padding:0">
+    <div class="scout-badge" id="scout-badge">
+      <div class="scout-avatar" id="scout-avatar">R</div>
+      <div>
+        <div class="scout-name" id="badge-name">Ravi Kumar</div>
+        <div class="scout-meta" id="badge-meta">Your name is saved for all reports</div>
+      </div>
+      <div class="player-count-badge" id="player-count-badge">0 players</div>
+    </div>
+    <div class="progress-strip">
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-label"><span id="prog-section">Player identity</span><span id="prog-pct">0%</span></div>
+    </div>
+  </div>
+
+  <div class="body" id="player-form-body">
+
+    <!-- ── PLAYER IDENTITY ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🏏</div>
+        <div><div class="card-title">Player identity</div><div class="card-sub">Who did you watch</div></div>
+      </div>
+      <div class="card-body">
+        <div class="two-col">
+          <div class="field">
+            <label class="label" for="p-first">First name <span class="req">*</span></label>
+            <input type="text" id="p-first" placeholder="Arjun">
+          </div>
+          <div class="field">
+            <label class="label" for="p-last">Last name <span class="req">*</span></label>
+            <input type="text" id="p-last" placeholder="Sharma">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label class="label" for="p-age">Age</label>
+            <input type="number" id="p-age" placeholder="22" min="13" max="45">
+          </div>
+          <div class="field">
+            <label class="label" for="p-height">Height</label>
+            <select id="p-height">
+              <option value="">Select</option>
+              <option>Short (under 5'7")</option>
+              <option>Medium (5'7"–5'11")</option>
+              <option>Tall (6'0"–6'3")</option>
+              <option>Very tall (6'4"+)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="p-state">State Association <span class="req">*</span></label>
+          <select id="p-state">
+            <option value="">Select state</option>
+            <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+            <option>Bihar</option><option>Chandigarh</option><option>Chhattisgarh</option>
+            <option>Delhi</option><option>Goa</option><option>Gujarat</option><option>Haryana</option>
+            <option>Himachal Pradesh</option><option>Hyderabad</option><option>Jammu & Kashmir</option>
+            <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+            <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+            <option>Meghalaya</option><option>Mizoram</option><option>Mumbai</option>
+            <option>Nagaland</option><option>Odisha</option><option>Punjab</option>
+            <option>Rajasthan</option><option>Saurashtra</option><option>Services</option>
+            <option>Sikkim</option><option>Tamil Nadu</option><option>Tripura</option>
+            <option>Uttar Pradesh</option><option>Uttarakhand</option><option>Vidarbha</option>
+            <option>West Bengal</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SIGHTING ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📍</div>
+        <div><div class="card-title">Sighting context</div><div class="card-sub">Where and how you watched</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Match context <span class="req">*</span></label>
+          <div class="chips">
+            <input type="radio" name="ctx" id="ctx1" value="State League" class="chip-in">
+            <label for="ctx1" class="chip-lb">State League</label>
+            <input type="radio" name="ctx" id="ctx2" value="BCCI Domestic" class="chip-in">
+            <label for="ctx2" class="chip-lb">BCCI Domestic</label>
+            <input type="radio" name="ctx" id="ctx3" value="Centre of Excellence" class="chip-in">
+            <label for="ctx3" class="chip-lb">COE</label>
+            <input type="radio" name="ctx" id="ctx4" value="Local League" class="chip-in">
+            <label for="ctx4" class="chip-lb">Local League</label>
+            <input type="radio" name="ctx" id="ctx5" value="Hinterland Spotting" class="chip-in">
+            <label for="ctx5" class="chip-lb">🌾 Hinterland</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="p-comp">Tournament / league name</label>
+          <input type="text" id="p-comp" placeholder="e.g. Vijay Hazare, DY Patil T20...">
+        </div>
+        <div class="field">
+          <label class="label">Watched</label>
+          <div class="chips">
+            <input type="radio" name="how" id="how1" value="Live" class="chip-in">
+            <label for="how1" class="chip-lb">👁 Live at ground</label>
+            <input type="radio" name="how" id="how2" value="TV/Video" class="chip-in">
+            <label for="how2" class="chip-lb">📺 TV / Video</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SPECIALISM ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">⚡</div>
+        <div><div class="card-title">Player specialism</div><div class="card-sub">Their primary T20 role</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Specialism <span class="req">*</span></label>
+          <div class="chips">
+            <input type="radio" name="spec" id="sp1" value="Pure Batter" class="chip-in" onchange="updateSections()">
+            <label for="sp1" class="chip-lb">Pure Batter</label>
+            <input type="radio" name="spec" id="sp2" value="Pure Bowler" class="chip-in" onchange="updateSections()">
+            <label for="sp2" class="chip-lb">Pure Bowler</label>
+            <input type="radio" name="spec" id="sp3" value="Bat/WK" class="chip-in" onchange="updateSections()">
+            <label for="sp3" class="chip-lb">Bat / WK</label>
+            <input type="radio" name="spec" id="sp4" value="Bat AR Seam" class="chip-in" onchange="updateSections()">
+            <label for="sp4" class="chip-lb">Bat AR Seam</label>
+            <input type="radio" name="spec" id="sp5" value="Bat AR Spin" class="chip-in" onchange="updateSections()">
+            <label for="sp5" class="chip-lb">Bat AR Spin</label>
+            <input type="radio" name="spec" id="sp6" value="Bowl AR Seam" class="chip-in" onchange="updateSections()">
+            <label for="sp6" class="chip-lb">Bowl AR Seam</label>
+            <input type="radio" name="spec" id="sp7" value="Bowl AR Spin" class="chip-in" onchange="updateSections()">
+            <label for="sp7" class="chip-lb">Bowl AR Spin</label>
+          </div>
+        </div>
+        <div class="field" id="field-hand">
+          <label class="label">Batting hand</label>
+          <div class="chips">
+            <input type="radio" name="hand" id="hd1" value="RHB" class="chip-in">
+            <label for="hd1" class="chip-lb">Right hand (RHB)</label>
+            <input type="radio" name="hand" id="hd2" value="LHB" class="chip-in">
+            <label for="hd2" class="chip-lb">Left hand (LHB)</label>
+          </div>
+        </div>
+        <div class="field conditional" id="field-btype">
+          <label class="label">Bowling type</label>
+          <div class="chips">
+            <input type="radio" name="btype" id="bt1" value="RAF" class="chip-in"><label for="bt1" class="chip-lb">RAF</label>
+            <input type="radio" name="btype" id="bt2" value="LAF" class="chip-in"><label for="bt2" class="chip-lb">LAF</label>
+            <input type="radio" name="btype" id="bt3" value="LAO" class="chip-in"><label for="bt3" class="chip-lb">LAO</label>
+            <input type="radio" name="btype" id="bt4" value="LAUO" class="chip-in"><label for="bt4" class="chip-lb">LAUO</label>
+            <input type="radio" name="btype" id="bt5" value="RALS" class="chip-in"><label for="bt5" class="chip-lb">RALS</label>
+            <input type="radio" name="btype" id="bt6" value="Mystery" class="chip-in"><label for="bt6" class="chip-lb">Mystery</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BATTER SECTION ── -->
+    <div class="card conditional" id="sec-batter">
+      <div class="card-header">
+        <div class="card-icon">🏏</div>
+        <div><div class="card-title">Batter assessment</div><div class="card-sub">What you saw at the crease</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Position</label>
+          <div class="chips">
+            <input type="radio" name="batpos" id="bp1" value="Opener" class="chip-in"><label for="bp1" class="chip-lb">Opener</label>
+            <input type="radio" name="batpos" id="bp2" value="No. 3" class="chip-in"><label for="bp2" class="chip-lb">No. 3</label>
+            <input type="radio" name="batpos" id="bp3" value="Middle Order" class="chip-in"><label for="bp3" class="chip-lb">Middle Order</label>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Hand speed</label>
+          <div class="chips">
+            <input type="radio" name="hspd" id="hs1" value="Exceptional" class="chip-in"><label for="hs1" class="chip-lb">Exceptional</label>
+            <input type="radio" name="hspd" id="hs2" value="Fast" class="chip-in"><label for="hs2" class="chip-lb">Fast</label>
+            <input type="radio" name="hspd" id="hs3" value="Moderate" class="chip-in"><label for="hs3" class="chip-lb">Moderate</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Bat swing</label>
+          <div class="chips">
+            <input type="radio" name="swing" id="sw1" value="Exceptional" class="chip-in"><label for="sw1" class="chip-lb">Exceptional</label>
+            <input type="radio" name="swing" id="sw2" value="Very Good" class="chip-in"><label for="sw2" class="chip-lb">Very Good</label>
+            <input type="radio" name="swing" id="sw3" value="Good" class="chip-in"><label for="sw3" class="chip-lb">Good</label>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Power hitting ability</label>
+          <div class="chips">
+            <input type="radio" name="power" id="pw1" value="Exceptional" class="chip-in"><label for="pw1" class="chip-lb">Exceptional</label>
+            <input type="radio" name="power" id="pw2" value="Very Good" class="chip-in"><label for="pw2" class="chip-lb">Very Good</label>
+            <input type="radio" name="power" id="pw3" value="Good" class="chip-in"><label for="pw3" class="chip-lb">Good</label>
+            <input type="radio" name="power" id="pw4" value="Developing" class="chip-in"><label for="pw4" class="chip-lb">Developing</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="callout"><p>A specific shot or moment that showed you their power hitting level.</p></div>
+          <textarea id="power-narrative" placeholder="Tell the story of what you saw..."></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Gaps ability and creative mindset</label>
+          <div class="callout"><p>Was it instinctive? Deliberate? Did they know where the fielders were before they played the shot?</p></div>
+          <textarea id="gaps" placeholder="How they found gaps and manipulated the field..."></textarea>
+        </div>
+        <div class="field">
+          <label class="label">Does the batter play the field?</label>
+          <div class="callout"><p>Reading placements, hitting into gaps deliberately, calling off shots when a fielder moved?</p></div>
+          <textarea id="plays-field" placeholder="What did you observe..."></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Reading variations under pressure</label>
+          <div class="chips">
+            <input type="radio" name="readvar" id="rv1" value="Exceptional" class="chip-in"><label for="rv1" class="chip-lb">Exceptional</label>
+            <input type="radio" name="readvar" id="rv2" value="Good" class="chip-in"><label for="rv2" class="chip-lb">Good</label>
+            <input type="radio" name="readvar" id="rv3" value="Struggled" class="chip-in"><label for="rv3" class="chip-lb">Struggled</label>
+            <input type="radio" name="readvar" id="rv4" value="Too early to tell" class="chip-in"><label for="rv4" class="chip-lb">Too early to tell</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="callout"><p>A specific delivery — slower ball, bouncer, wide yorker — that told you how they read the ball under pressure.</p></div>
+          <textarea id="readvar-narrative" placeholder="The moment that showed you..."></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Game smarts — batting intelligence</label>
+          <div class="callout"><p>Not just the shots — the thinking. How did they read the game? What did you feel about their cricket mind?</p></div>
+          <textarea id="bat-smarts" placeholder="Walk me through what you saw and felt..." style="min-height:110px"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BOWLER SECTION ── -->
+    <div class="card conditional" id="sec-bowler">
+      <div class="card-header">
+        <div class="card-icon">🎯</div>
+        <div><div class="card-title">Bowler assessment</div><div class="card-sub">What you saw with the ball</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Pace category</label>
+          <div class="chips">
+            <input type="radio" name="pace" id="pc1" value="Express" class="chip-in"><label for="pc1" class="chip-lb">Express</label>
+            <input type="radio" name="pace" id="pc2" value="Fast" class="chip-in"><label for="pc2" class="chip-lb">Fast</label>
+            <input type="radio" name="pace" id="pc3" value="Fast-Medium" class="chip-in"><label for="pc3" class="chip-lb">Fast-Medium</label>
+            <input type="radio" name="pace" id="pc4" value="Medium" class="chip-in"><label for="pc4" class="chip-lb">Medium</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Skills identified <span class="hint" style="display:inline;margin:0 0 0 6px">select all that apply</span></label>
+          <div class="chips">
+            <input type="checkbox" name="skills" id="sk1" value="Swing" class="chip-in"><label for="sk1" class="chip-lb">Swing</label>
+            <input type="checkbox" name="skills" id="sk2" value="Seam" class="chip-in"><label for="sk2" class="chip-lb">Seam</label>
+            <input type="checkbox" name="skills" id="sk3" value="Sharp bouncer" class="chip-in"><label for="sk3" class="chip-lb">Sharp bouncer</label>
+            <input type="checkbox" name="skills" id="sk4" value="Deceptive slower (dipping)" class="chip-in"><label for="sk4" class="chip-lb">Deceptive slower</label>
+            <input type="checkbox" name="skills" id="sk5" value="Deceptive slow bouncer" class="chip-in"><label for="sk5" class="chip-lb">Slow bouncer</label>
+            <input type="checkbox" name="skills" id="sk6" value="Heel + wide yorker" class="chip-in"><label for="sk6" class="chip-lb">Heel + wide yorker</label>
+            <input type="checkbox" name="skills" id="sk7" value="Heel only" class="chip-in"><label for="sk7" class="chip-lb">Heel only</label>
+            <input type="checkbox" name="skills" id="sk8" value="Wide only" class="chip-in"><label for="sk8" class="chip-lb">Wide only</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Variations picked up</label>
+          <textarea id="variations" placeholder="Both the ones that worked and the ones they went to under pressure..."></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Field setting and ball choice</label>
+          <div class="chips">
+            <input type="radio" name="fieldsetting" id="fs1" value="Exceptional" class="chip-in"><label for="fs1" class="chip-lb">Exceptional</label>
+            <input type="radio" name="fieldsetting" id="fs2" value="Very Good" class="chip-in"><label for="fs2" class="chip-lb">Very Good</label>
+            <input type="radio" name="fieldsetting" id="fs3" value="Good" class="chip-in"><label for="fs3" class="chip-lb">Good</label>
+            <input type="radio" name="fieldsetting" id="fs4" value="Can Improve" class="chip-in"><label for="fs4" class="chip-lb">Can Improve</label>
+          </div>
+          <textarea id="fieldsetting-narrative" placeholder="A specific over that showed their tactical thinking..." style="margin-top:10px"></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Speed and length under pressure</label>
+          <div class="chips">
+            <input type="radio" name="varpressure" id="vp1" value="Executed under pressure" class="chip-in"><label for="vp1" class="chip-lb">Executed well</label>
+            <input type="radio" name="varpressure" id="vp2" value="Inconsistent under pressure" class="chip-in"><label for="vp2" class="chip-lb">Inconsistent</label>
+            <input type="radio" name="varpressure" id="vp3" value="Too early to tell" class="chip-in"><label for="vp3" class="chip-lb">Too early to tell</label>
+          </div>
+          <textarea id="pressure-narrative" placeholder="When the game was tight — did the slower ball still dip? Did the yorker still land?" style="margin-top:10px"></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label" style="color:var(--amber)">⚡ The difficult overs</label>
+          <div class="callout-hot"><p><strong>This is where T20 bowlers are defined.</strong> Did you see them bowl the powerplay, overs 16–18, or the final over with the game on the line? Tell us everything — what happened, how they set up, how they responded under pressure.</p></div>
+          <textarea id="diff-overs" placeholder="Which overs? What happened? How did they set up? How did they respond? What did it tell you about them as a T20 bowler?..." style="min-height:120px"></textarea>
+        </div>
+        <div class="field">
+          <label class="label">Phases assessed</label>
+          <div class="chips">
+            <input type="checkbox" name="phases" id="ph1" value="Powerplay (1–6)" class="chip-in"><label for="ph1" class="chip-lb">Powerplay (1–6)</label>
+            <input type="checkbox" name="phases" id="ph2" value="Middle (7–15)" class="chip-in"><label for="ph2" class="chip-lb">Middle (7–15)</label>
+            <input type="checkbox" name="phases" id="ph3" value="Death (16–20)" class="chip-in"><label for="ph3" class="chip-lb">Death (16–20)</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Game smarts — bowling intelligence</label>
+          <div class="callout"><p>How did they think through their spell? How did they respond to a boundary? Did their body language change under pressure?</p></div>
+          <textarea id="bowl-smarts" placeholder="Walk me through what you saw and felt..." style="min-height:110px"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WK SECTION ── -->
+    <div class="card conditional" id="sec-wk">
+      <div class="card-header">
+        <div class="card-icon">🧤</div>
+        <div><div class="card-title">Wicketkeeper</div><div class="card-sub">Glove work and angles</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Glove work</label>
+          <div class="chips">
+            <input type="radio" name="gloves" id="gw1" value="Exceptional" class="chip-in"><label for="gw1" class="chip-lb">Exceptional</label>
+            <input type="radio" name="gloves" id="gw2" value="Very Good" class="chip-in"><label for="gw2" class="chip-lb">Very Good</label>
+            <input type="radio" name="gloves" id="gw3" value="Good" class="chip-in"><label for="gw3" class="chip-lb">Good</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="callout"><p>Does he set correct angles standing up and back? Footwork? Any stumping or diving takes that stood out?</p></div>
+          <textarea id="wk-notes" placeholder="What you observed with the gloves..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FIELDING ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🤸</div>
+        <div><div class="card-title">Fielding and athleticism</div><div class="card-sub">In the field and between wickets</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Athletic base</label>
+          <div class="chips">
+            <input type="radio" name="athletic" id="ab1" value="Good fielder + runner" class="chip-in"><label for="ab1" class="chip-lb">Good fielder + runner</label>
+            <input type="radio" name="athletic" id="ab2" value="Good fielder" class="chip-in"><label for="ab2" class="chip-lb">Good fielder</label>
+            <input type="radio" name="athletic" id="ab3" value="Good runner" class="chip-in"><label for="ab3" class="chip-lb">Good runner</label>
+            <input type="radio" name="athletic" id="ab4" value="Needs development" class="chip-in"><label for="ab4" class="chip-lb">Needs development</label>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label class="label">Catching</label>
+            <div class="chips" style="flex-direction:column;gap:5px">
+              <span><input type="radio" name="catch" id="ca1" value="Exceptional" class="chip-in"><label for="ca1" class="chip-lb" style="display:inline-block">Exceptional</label></span>
+              <span><input type="radio" name="catch" id="ca2" value="Good" class="chip-in"><label for="ca2" class="chip-lb" style="display:inline-block">Good</label></span>
+              <span><input type="radio" name="catch" id="ca3" value="Unreliable" class="chip-in"><label for="ca3" class="chip-lb" style="display:inline-block">Unreliable</label></span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Throwing arm</label>
+            <div class="chips" style="flex-direction:column;gap:5px">
+              <span><input type="radio" name="arm" id="ta1" value="Strong" class="chip-in"><label for="ta1" class="chip-lb" style="display:inline-block">Strong</label></span>
+              <span><input type="radio" name="arm" id="ta2" value="Average" class="chip-in"><label for="ta2" class="chip-lb" style="display:inline-block">Average</label></span>
+              <span><input type="radio" name="arm" id="ta3" value="Weak" class="chip-in"><label for="ta3" class="chip-lb" style="display:inline-block">Weak</label></span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Best position in the field</label>
+          <input type="text" id="field-pos" placeholder="e.g. Cover point, Fine leg, Slip...">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BACKGROUND ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📖</div>
+        <div><div class="card-title">Background and journey</div><div class="card-sub">The human story</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="callout"><p>Where are they from? How did they get into cricket? Family, journey, anything about their story. Even fragments matter.</p></div>
+          <textarea id="background" placeholder="Their background and cricket journey..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MEDIA ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🎥</div>
+        <div><div class="card-title">Video and profiles</div><div class="card-sub">Links, footage, profiles</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label" for="videos">Video links</label>
+          <div class="hint">YouTube, Instagram, WhatsApp clip URLs — one per line</div>
+          <textarea id="videos" placeholder="https://youtube.com/...&#10;https://instagram.com/..." style="min-height:70px"></textarea>
+        </div>
+        <div class="field">
+          <label class="label" for="cricinfo">ESPNcricinfo profile</label>
+          <input type="url" id="cricinfo" placeholder="https://espncricinfo.com/player/...">
+        </div>
+        <div class="field">
+          <label class="label" for="cricheros">Cricheros profile</label>
+          <input type="url" id="cricheros" placeholder="https://cricheros.com/...">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GRADING ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">⭐</div>
+        <div><div class="card-title">Your grading</div><div class="card-sub">Your assessment of this player</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Current ability grade <span class="req">*</span></label>
+          <div class="hint">Where are they right now?</div>
+          <div class="grade-chips">
+            <input type="radio" name="cgrade" id="cg1" value="A+" class="gchip-in"><label for="cg1" class="gchip-lb">A+</label>
+            <input type="radio" name="cgrade" id="cg2" value="A" class="gchip-in"><label for="cg2" class="gchip-lb">A</label>
+            <input type="radio" name="cgrade" id="cg3" value="B+" class="gchip-in"><label for="cg3" class="gchip-lb">B+</label>
+            <input type="radio" name="cgrade" id="cg4" value="B" class="gchip-in"><label for="cg4" class="gchip-lb">B</label>
+            <input type="radio" name="cgrade" id="cg5" value="C" class="gchip-in"><label for="cg5" class="gchip-lb">C</label>
+          </div>
+        </div>
+        <div class="field">
+          <textarea id="cgrade-reason" placeholder="What makes you give this grade?"></textarea>
+        </div>
+        <div class="field">
+          <label class="label">Ceiling grade</label>
+          <div class="hint">In 2–3 years, if everything goes right — what could they become?</div>
+          <div class="grade-chips">
+            <input type="radio" name="ceil" id="cl1" value="A+" class="gchip-in"><label for="cl1" class="gchip-lb">A+</label>
+            <input type="radio" name="ceil" id="cl2" value="A" class="gchip-in"><label for="cl2" class="gchip-lb">A</label>
+            <input type="radio" name="ceil" id="cl3" value="B+" class="gchip-in"><label for="cl3" class="gchip-lb">B+</label>
+            <input type="radio" name="ceil" id="cl4" value="B" class="gchip-in"><label for="cl4" class="gchip-lb">B</label>
+            <input type="radio" name="ceil" id="cl5" value="C" class="gchip-in"><label for="cl5" class="gchip-lb">C</label>
+          </div>
+        </div>
+        <div class="field">
+          <textarea id="ceil-reason" placeholder="What would need to happen for them to reach that ceiling?"></textarea>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">T20 role fit <span class="hint" style="display:inline;margin:0 0 0 6px">select all that apply</span></label>
+          <div class="chips">
+            <input type="checkbox" name="role" id="r1" value="Powerplay batter" class="chip-in"><label for="r1" class="chip-lb">Powerplay batter</label>
+            <input type="checkbox" name="role" id="r2" value="Anchor batter" class="chip-in"><label for="r2" class="chip-lb">Anchor batter</label>
+            <input type="checkbox" name="role" id="r3" value="Finisher" class="chip-in"><label for="r3" class="chip-lb">Finisher</label>
+            <input type="checkbox" name="role" id="r4" value="Powerplay bowler" class="chip-in"><label for="r4" class="chip-lb">Powerplay bowler</label>
+            <input type="checkbox" name="role" id="r5" value="Middle overs specialist" class="chip-in"><label for="r5" class="chip-lb">Middle overs</label>
+            <input type="checkbox" name="role" id="r6" value="Death bowler" class="chip-in"><label for="r6" class="chip-lb">⚡ Death bowler</label>
+            <input type="checkbox" name="role" id="r7" value="WK batter" class="chip-in"><label for="r7" class="chip-lb">WK batter</label>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label class="label">Recommendation <span class="req">*</span></label>
+          <div class="chips">
+            <input type="radio" name="rec" id="rc1" value="Sign Now" class="chip-in"><label for="rc1" class="chip-lb">Sign Now</label>
+            <input type="radio" name="rec" id="rc2" value="Invite to Trial" class="chip-in"><label for="rc2" class="chip-lb">Invite to Trial</label>
+            <input type="radio" name="rec" id="rc3" value="Monitor" class="chip-in"><label for="rc3" class="chip-lb">Monitor</label>
+            <input type="radio" name="rec" id="rc4" value="Pass" class="chip-in"><label for="rc4" class="chip-lb">Pass</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Urgency</label>
+          <div class="chips">
+            <input type="radio" name="urgency" id="ug1" value="Hot Prospect" class="chip-in"><label for="ug1" class="chip-lb">🔥 Hot Prospect</label>
+            <input type="radio" name="urgency" id="ug2" value="Normal" class="chip-in"><label for="ug2" class="chip-lb">Normal</label>
+            <input type="radio" name="urgency" id="ug3" value="Low Priority" class="chip-in"><label for="ug3" class="chip-lb">Low Priority</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Trial recommendation</label>
+          <textarea id="trial" placeholder="Would you call them to our performance centre — and why? Be direct."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FINAL WORD ── -->
+    <div class="card">
+      <div class="card-header" style="background:linear-gradient(135deg,#1a3d2b,#2d6a47)">
+        <div class="card-icon" style="background:rgba(232,160,32,.25)">✍️</div>
+        <div><div class="card-title">The scout's final word</div><div class="card-sub">The most important part of this report</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="callout"><p>In your own words — what did you <em>feel</em> about this player? Not the grades. Your gut. What will you remember about watching them? Be as honest and creative as you like.</p></div>
+          <textarea id="final-word" placeholder="This is your space. Tell us what you really think..." style="min-height:120px"></textarea>
+        </div>
+        <div class="field">
+          <label class="label">Anything else?</label>
+          <textarea id="anything-else" placeholder="Anything that didn't fit above..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SAVE PLAYER BUTTON ── -->
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" onclick="savePlayer()" id="save-btn">Save player report ✓</button>
+    </div>
+    <p style="text-align:center;font-size:12px;color:var(--slate-light);margin-top:10px">Saved reports stay in your session. Submit all to MI Cricket Intelligence at the end.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- SCREEN 3: SESSION SUMMARY              -->
+<!-- ══════════════════════════════════════ -->
+<div class="screen" id="screen-session">
+  <div class="header" style="padding:0">
+    <div class="scout-badge" id="session-badge">
+      <div class="scout-avatar" id="session-avatar">R</div>
+      <div>
+        <div class="scout-name" id="session-badge-name">Ravi Kumar</div>
+        <div class="scout-meta">Session report</div>
+      </div>
+      <div class="player-count-badge" id="session-count-badge">0 players</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div style="background:var(--green-light);border-radius:var(--radius);padding:16px;margin-bottom:14px;border:1px solid #b8dfc8">
+      <div style="font-size:14px;font-weight:600;color:var(--green);margin-bottom:4px">Players filed this session</div>
+      <div style="font-size:12px;color:var(--slate)">Review your reports below, then add more or submit all to the MI Cricket Intelligence ops team.</div>
+    </div>
+
+    <div id="session-player-list"></div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+      <button class="btn btn-amber" onclick="addAnotherPlayer()">+ Add another player</button>
+      <button class="btn btn-primary" onclick="submitSession()" id="submit-all-btn">Submit all reports to MI Cricket Intelligence →</button>
+      <button class="btn btn-outline btn-sm" onclick="showScreen('screen-player')" style="font-weight:500">← Back to current report</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- SCREEN 4: SUBMITTED                    -->
+<!-- ══════════════════════════════════════ -->
+<div class="screen" id="screen-done">
+  <div class="body" style="padding-top:40px">
+    <div class="success-wrap">
+      <div class="success-icon">🏏</div>
+      <div class="success-title">Session submitted</div>
+      <div class="success-body" id="done-body">All player reports have been sent to MI Cricket Intelligence. Great work today.</div>
+      <button class="btn btn-primary" onclick="newSession()" style="max-width:300px;margin:0 auto;display:block">Start a new session</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+var scout = {name:'', phone:'', region:''};
+var players = [];
+var editingIdx = -1;
+
+// ── SCREEN NAV ──
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── LOGIN ──
+function loginScout(){
+  var first = document.getElementById('s-first').value.trim();
+  var last  = document.getElementById('s-last').value.trim();
+  if(!first||!last){alert('Please enter your first and last name.');return;}
+  scout.name   = first+' '+last;
+  scout.phone  = document.getElementById('s-phone').value.trim();
+  scout.region = document.getElementById('s-region').value;
+
+  var initials = (first[0]+(last[0]||'')).toUpperCase();
+  document.getElementById('scout-avatar').textContent   = initials;
+  document.getElementById('badge-name').textContent     = scout.name;
+  document.getElementById('badge-meta').textContent     = scout.region || 'Scout';
+  document.getElementById('session-avatar').textContent = initials;
+  document.getElementById('session-badge-name').textContent = scout.name;
+
+  updatePlayerCountBadge();
+  showScreen('screen-player');
+}
+
+// ── SECTIONS ──
+function updateSections(){
+  var v = getVal('spec');
+  var isBat  = ['Pure Batter','Bat/WK','Bat AR Seam','Bat AR Spin'].includes(v);
+  var isBowl = ['Pure Bowler','Bowl AR Seam','Bowl AR Spin','Bat AR Seam','Bat AR Spin'].includes(v);
+  var isWK   = v==='Bat/WK';
+  var hasBowlType = ['Pure Bowler','Bowl AR Seam','Bowl AR Spin','Bat AR Seam','Bat AR Spin'].includes(v);
+
+  toggle('sec-batter', isBat);
+  toggle('sec-bowler', isBowl);
+  toggle('sec-wk',     isWK);
+  toggle('field-btype',hasBowlType);
+  toggle('field-hand', isBat||isWK);
+  updateProgress();
+}
+
+function toggle(id, show){
+  document.getElementById(id).classList.toggle('on', show);
+}
+
+// ── PROGRESS ──
+function updateProgress(){
+  var required = ['p-first','p-last','p-state'];
+  var checked  = ['ctx','spec','cgrade','rec'];
+  var filled = 0, total = required.length + checked.length;
+  required.forEach(function(id){if(document.getElementById(id)&&document.getElementById(id).value.trim())filled++;});
+  checked.forEach(function(n){if(getVal(n))filled++;});
+  var pct = Math.round((filled/total)*100);
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-pct').textContent  = pct+'%';
+  var labels = ['Player identity','Sighting','Specialism','Assessment','Grading','Done'];
+  document.getElementById('prog-section').textContent = labels[Math.min(Math.floor(pct/20),5)];
+}
+
+// ── HELPERS ──
+function getVal(name){
+  var el = document.querySelector('input[name="'+name+'"]:checked');
+  return el ? el.value : '';
+}
+function getChecked(name){
+  return Array.from(document.querySelectorAll('input[name="'+name+'"]:checked')).map(function(e){return e.value;});
+}
+function getTA(id){
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function getTxt(id){
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+// ── SAVE PLAYER ──
+function savePlayer(){
+  var first = document.getElementById('p-first').value.trim();
+  var last  = document.getElementById('p-last').value.trim();
+  var state = document.getElementById('p-state').value;
+  var cgrade= getVal('cgrade');
+  var rec   = getVal('rec');
+
+  if(!first||!last){alert('Please enter the player\'s first and last name.');return;}
+  if(!state){alert('Please select the player\'s state association.');return;}
+  if(!cgrade){alert('Please give the player a current ability grade.');return;}
+  if(!rec){alert('Please select a recommendation.');return;}
+
+  var player = {
+    id: Date.now(),
+    firstName: first, lastName: last,
+    age: document.getElementById('p-age').value.trim(),
+    height: document.getElementById('p-height').value,
+    state: state,
+    context: getVal('ctx'),
+    competition: getTxt('p-comp'),
+    watchedHow: getVal('how'),
+    specialism: getVal('spec'),
+    handedness: getVal('hand'),
+    bowlerType: getVal('btype'),
+    // batter
+    battingPosition: getVal('batpos'),
+    handSpeed: getVal('hspd'),
+    batSwing: getVal('swing'),
+    powerHitting: getVal('power'),
+    powerNarrative: getTA('power-narrative'),
+    gapsAbility: getTA('gaps'),
+    playsField: getTA('plays-field'),
+    readVariations: getVal('readvar'),
+    readVarNarrative: getTA('readvar-narrative'),
+    batterSmarts: getTA('bat-smarts'),
+    // bowler
+    pace: getVal('pace'),
+    skills: getChecked('skills'),
+    variations: getTA('variations'),
+    fieldSetting: getVal('fieldsetting'),
+    fieldSettingNarrative: getTA('fieldsetting-narrative'),
+    varPressure: getVal('varpressure'),
+    pressureNarrative: getTA('pressure-narrative'),
+    difficultOvers: getTA('diff-overs'),
+    phases: getChecked('phases'),
+    bowlerSmarts: getTA('bowl-smarts'),
+    // wk
+    gloves: getVal('gloves'),
+    wkNotes: getTA('wk-notes'),
+    // fielding
+    athletic: getVal('athletic'),
+    catching: getVal('catch'),
+    arm: getVal('arm'),
+    fieldPos: getTxt('field-pos'),
+    // background
+    background: getTA('background'),
+    // media
+    videos: getTA('videos'),
+    cricinfo: getTxt('cricinfo'),
+    cricheros: getTxt('cricheros'),
+    // grading
+    currentGrade: cgrade,
+    currentGradeReason: getTA('cgrade-reason'),
+    ceilingGrade: getVal('ceil'),
+    ceilingReason: getTA('ceil-reason'),
+    roleFit: getChecked('role'),
+    recommendation: rec,
+    urgency: getVal('urgency'),
+    trial: getTA('trial'),
+    finalWord: getTA('final-word'),
+    anythingElse: getTA('anything-else'),
+    submittedAt: new Date().toISOString()
+  };
+
+  if(editingIdx >= 0){
+    players[editingIdx] = player;
+    editingIdx = -1;
+  } else {
+    players.push(player);
+  }
+
+  updatePlayerCountBadge();
+  buildSessionScreen();
+  showScreen('screen-session');
+}
+
+// ── SESSION SCREEN ──
+function buildSessionScreen(){
+  var list = document.getElementById('session-player-list');
+  document.getElementById('session-count-badge').textContent = players.length+' player'+(players.length!==1?'s':'');
+  list.innerHTML = players.map(function(p, i){
+    var gradeClass = p.currentGrade==='A+' ? 'sp-grade grade-a-plus' : 'sp-grade';
+    var urgencyTag = p.urgency==='Hot Prospect' ? ' 🔥' : '';
+    return '<div class="session-player">'+
+      '<div class="sp-num">'+(i+1)+'</div>'+
+      '<div class="sp-info">'+
+        '<div class="sp-name">'+p.firstName+' '+p.lastName+urgencyTag+'</div>'+
+        '<div class="sp-meta">'+p.specialism+(p.state?' · '+p.state:'')+(p.recommendation?' · '+p.recommendation:'')+'</div>'+
+      '</div>'+
+      '<div class="'+gradeClass+'">'+p.currentGrade+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function updatePlayerCountBadge(){
+  var badge = document.getElementById('player-count-badge');
+  if(badge) badge.textContent = players.length+' player'+(players.length!==1?'s':'');
+}
+
+// ── ADD ANOTHER ──
+function addAnotherPlayer(){
+  editingIdx = -1;
+  clearPlayerForm();
+  showScreen('screen-player');
+  window.scrollTo(0,0);
+}
+
+function clearPlayerForm(){
+  // clear all inputs in player form
+  document.querySelectorAll('#screen-player input[type=text], #screen-player input[type=number], #screen-player input[type=url], #screen-player input[type=tel], #screen-player textarea').forEach(function(el){el.value='';});
+  document.querySelectorAll('#screen-player select').forEach(function(el){el.selectedIndex=0;});
+  document.querySelectorAll('#screen-player input[type=radio], #screen-player input[type=checkbox]').forEach(function(el){el.checked=false;});
+  updateSections();
+  updateProgress();
+}
+
+// ── SUBMIT SESSION ──
+function submitSession(){
+  if(players.length===0){alert('No players to submit.');return;}
+  var btn = document.getElementById('submit-all-btn');
+  btn.textContent = 'Submitting...';
+  btn.disabled = true;
+
+  var report = buildFullReport();
+
+  // Copy to clipboard for MI Cricket Intelligence ops team
+  if(navigator.clipboard){navigator.clipboard.writeText(report).catch(function(){});}
+
+  setTimeout(function(){
+    var doneBody = 'You filed '+players.length+' player report'+(players.length!==1?'s':'')+' in this session. ';
+    doneBody += 'The full report has been copied to your clipboard — paste it into WhatsApp, email, or your ops channel.';
+    document.getElementById('done-body').textContent = doneBody;
+    showScreen('screen-done');
+  }, 1000);
+}
+
+// ── BUILD REPORT ──
+function buildFullReport(){
+  var lines = [];
+  lines.push('╔═══════════════════════════════════╗');
+  lines.push('║  MI CRICKET INTELLIGENCE           ║');
+  lines.push('╚═══════════════════════════════════╝');
+  lines.push('Scout: '+scout.name+(scout.region?' | '+scout.region:''));
+  if(scout.phone) lines.push('Mobile: '+scout.phone);
+  lines.push('Session date: '+new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}));
+  lines.push('Players filed: '+players.length);
+  lines.push('');
+
+  players.forEach(function(p,i){
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('PLAYER '+(i+1)+': '+p.firstName+' '+p.lastName+(p.urgency==='Hot Prospect'?' 🔥 HOT PROSPECT':''));
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if(p.age) lines.push('Age: '+p.age);
+    if(p.height) lines.push('Height: '+p.height);
+    if(p.state) lines.push('State: '+p.state);
+    if(p.specialism) lines.push('Specialism: '+p.specialism);
+    if(p.handedness) lines.push('Batting hand: '+p.handedness);
+    if(p.bowlerType) lines.push('Bowling type: '+p.bowlerType);
+    lines.push('');
+    lines.push('SIGHTING');
+    if(p.context) lines.push('Context: '+p.context);
+    if(p.competition) lines.push('Competition: '+p.competition);
+    if(p.watchedHow) lines.push('Watched: '+p.watchedHow);
+    lines.push('');
+
+    var hasBat=['Pure Batter','Bat/WK','Bat AR Seam','Bat AR Spin'].includes(p.specialism);
+    var hasBowl=['Pure Bowler','Bowl AR Seam','Bowl AR Spin','Bat AR Seam','Bat AR Spin'].includes(p.specialism);
+
+    if(hasBat){
+      lines.push('BATTER ASSESSMENT');
+      if(p.battingPosition) lines.push('Position: '+p.battingPosition);
+      if(p.handSpeed) lines.push('Hand speed: '+p.handSpeed);
+      if(p.batSwing) lines.push('Bat swing: '+p.batSwing);
+      if(p.powerHitting) lines.push('Power hitting: '+p.powerHitting);
+      if(p.powerNarrative) lines.push('Power moment — "'+p.powerNarrative+'"');
+      if(p.gapsAbility) lines.push('Gaps ability — "'+p.gapsAbility+'"');
+      if(p.playsField) lines.push('Plays the field — "'+p.playsField+'"');
+      if(p.readVariations) lines.push('Reading variations: '+p.readVariations);
+      if(p.readVarNarrative) lines.push('Variations moment — "'+p.readVarNarrative+'"');
+      if(p.batterSmarts) lines.push('Game smarts — "'+p.batterSmarts+'"');
+      lines.push('');
+    }
+    if(hasBowl){
+      lines.push('BOWLER ASSESSMENT');
+      if(p.pace) lines.push('Pace: '+p.pace);
+      if(p.skills&&p.skills.length) lines.push('Skills: '+p.skills.join(', '));
+      if(p.variations) lines.push('Variations — "'+p.variations+'"');
+      if(p.fieldSetting) lines.push('Field setting: '+p.fieldSetting);
+      if(p.fieldSettingNarrative) lines.push('Tactical moment — "'+p.fieldSettingNarrative+'"');
+      if(p.varPressure) lines.push('Variations under pressure: '+p.varPressure);
+      if(p.pressureNarrative) lines.push('Pressure moment — "'+p.pressureNarrative+'"');
+      if(p.difficultOvers) lines.push('⚡ DIFFICULT OVERS — "'+p.difficultOvers+'"');
+      if(p.phases&&p.phases.length) lines.push('Phases assessed: '+p.phases.join(', '));
+      if(p.bowlerSmarts) lines.push('Game smarts — "'+p.bowlerSmarts+'"');
+      lines.push('');
+    }
+    lines.push('FIELDING');
+    if(p.athletic) lines.push('Athletic base: '+p.athletic);
+    if(p.catching) lines.push('Catching: '+p.catching);
+    if(p.arm) lines.push('Throwing arm: '+p.arm);
+    if(p.fieldPos) lines.push('Best position: '+p.fieldPos);
+    if(p.background){lines.push('');lines.push('BACKGROUND');lines.push(p.background);}
+    lines.push('');
+    lines.push('GRADING');
+    lines.push('Current grade: '+p.currentGrade+(p.currentGradeReason?' — "'+p.currentGradeReason+'"':''));
+    if(p.ceilingGrade) lines.push('Ceiling grade: '+p.ceilingGrade+(p.ceilingReason?' — "'+p.ceilingReason+'"':''));
+    if(p.roleFit&&p.roleFit.length) lines.push('Role fit: '+p.roleFit.join(', '));
+    lines.push('Recommendation: '+p.recommendation);
+    if(p.urgency) lines.push('Urgency: '+p.urgency);
+    if(p.trial) lines.push('Trial — "'+p.trial+'"');
+    if(p.videos||p.cricinfo||p.cricheros){
+      lines.push('');lines.push('MEDIA');
+      if(p.videos) lines.push(p.videos);
+      if(p.cricinfo) lines.push('Cricinfo: '+p.cricinfo);
+      if(p.cricheros) lines.push('Cricheros: '+p.cricheros);
+    }
+    lines.push('');
+    lines.push('SCOUT\'S FINAL WORD');
+    lines.push(p.finalWord||'(Not provided)');
+    if(p.anythingElse){lines.push('');lines.push('Also: '+p.anythingElse);}
+    lines.push('');
+  });
+
+  lines.push('═══════════════════════════════════');
+  lines.push('End of session — '+players.length+' player'+(players.length!==1?'s':'')+' filed by '+scout.name);
+  lines.push('═══════════════════════════════════');
+  return lines.join('\n');
+}
+
+// ── NEW SESSION ──
+function newSession(){
+  players = [];
+  editingIdx = -1;
+  clearPlayerForm();
+  document.getElementById('s-first').value='';
+  document.getElementById('s-last').value='';
+  document.getElementById('s-phone').value='';
+  document.getElementById('s-region').selectedIndex=0;
+  showScreen('screen-login');
+}
+
+// ── PROGRESS LISTENERS ──
+document.querySelectorAll('#screen-player input, #screen-player select, #screen-player textarea').forEach(function(el){
+  el.addEventListener('change', updateProgress);
+  el.addEventListener('input', updateProgress);
+});
+updateProgress();
+</script>
+</body>
+</html>
